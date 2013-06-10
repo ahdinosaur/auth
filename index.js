@@ -1,4 +1,5 @@
 var resource = require('resource'),
+    http = resource.use('http'),
     logger = resource.logger,
     auth = resource.define('auth');
 
@@ -39,71 +40,56 @@ auth.method('deserialize', deserialize, {
   }
 });
 
-function use(connectr, app) {
-  logger.info(connectr, app);
+function start() {
   passport = require('passport');
 
   passport.serializeUser(auth.serialize);
   passport.deserializeUser(auth.deserialize);
 
   // feature detection of which auth providers to use
-  var authProviders = [];
+  auth.providers = [];
   var authRe = /auth-(.)*/;
   Object.keys(resource).forEach(function(possibleAuthProvider) {
     if (authRe.test(possibleAuthProvider)) {
       // we found an auth provider, use it
       var authProvider = resource[possibleAuthProvider];
-      logger.info("using", authProvider, "as auth middleware");
+      logger.info("using", authProvider.name, "as auth middleware");
 
       // add provider to list of providers
-      authProviders.push(authProvider);
+      auth.providers.push(authProvider);
       // add property to store provider instance ids
       auth.property(authRe.exec(authProvider.name)[1], {
         description: "instance id of " + authProvider.name,
         type: 'string'
       });
       // use auth strategy of provider
-      logger.info(authProvider);
       authProvider.strategy(function(err, strategy) {
         passport.use(strategy);
       });
     }
   });
 
-  connectr.after('session').use(passport.initialize()).as('auth-init');
-  connectr.after('auth-init').use(passport.session()).as('auth-session');
+  http.connectr.after('session').use(passport.initialize()).as('auth-init');
+  http.connectr.after('auth-init').use(passport.session()).as('auth-session');
 }
-auth.method('use', use, {
-  description: 'use authentication in an app',
-  properties: {
-    connectr: {
-      type: 'object'
-    },
-    app: {
-      type: 'object'
-    }
-  }
+auth.method('start', start, {
+  description: 'start authentication in an app'
 });
 
-function routes(app) {
+function routes() {
   // logout route
-  app.get('/logout', function(req, res){
+  http.app.get('/logout', function(req, res){
     req.logout();
     res.redirect('/');
   });
 
   // auth providers can add more routes
-  authProviders.forEach(function(authProvider) {
-    authProvider.routes(app);
+  auth.providers.forEach(function(authProvider) {
+    authProvider.routes();
   });
 }
 auth.method('routes', routes, {
-  description: 'sets up auth routes',
-  properties: {
-    app: {
-      type: 'object'
-    }
-  }
+  description: 'sets up auth routes'
 });
 
 function authenticate(provider, options, middleware) {
