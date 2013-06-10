@@ -48,7 +48,7 @@ function start() {
 
   // feature detection of which auth providers to use
   auth.providers = [];
-  var authRe = /auth-(.)*/;
+  var authRe = /auth-(.*)/;
   Object.keys(resource).forEach(function(possibleAuthProvider) {
     if (authRe.test(possibleAuthProvider)) {
       // we found an auth provider, use it
@@ -58,6 +58,7 @@ function start() {
       // add provider to list of providers
       auth.providers.push(authProvider);
       // add property to store provider instance ids
+      logger.info("defining", authRe.exec(authProvider.name)[1], "of auth");
       auth.property(authRe.exec(authProvider.name)[1], {
         description: "instance id of " + authProvider.name,
         type: 'string'
