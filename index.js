@@ -1,5 +1,6 @@
 var resource = require('resource'),
     http = resource.use('http'),
+    user = resource.use('user'),
     logger = resource.logger,
     auth = resource.define('auth');
 
@@ -8,7 +9,7 @@ auth.schema.description = "for integrating authentication";
 auth.persist('memory');
 
 // TODO remove
-auth.property('browserid', {
+user.property('browserid', {
   description: "instance id of browserid",
   type: 'string'
 });
@@ -16,38 +17,6 @@ auth.property('browserid', {
 auth.providers = {};
 auth.setup = false;
 
-function serialize(auth, done) {
-  done(null, auth.id);
-}
-auth.method('serialize', serialize, {
-  description: "serialize auth",
-  properties: {
-    auth: {
-      type: 'object'
-    },
-    done: {
-      type: 'function'
-    }
-  }
-});
-
-function deserialize(id, done) {
-  auth.get(id, function(err, _auth) {
-    if (err) { throw err; }
-    done(null, _auth);
-  });
-}
-auth.method('deserialize', deserialize, {
-  description: "deserialize auth",
-  properties: {
-    id: {
-      type: 'string'
-    },
-    done: {
-      type: 'function'
-    }
-  }
-});
 
 function start(options, callback) {
   var async = require('async');
@@ -93,12 +62,12 @@ function start(options, callback) {
         },
         // setup passport serialization
         function(callback) {
-          passport.serializeUser(auth.serialize);
+          passport.serializeUser(user.serialize);
           callback(null);
         },
         // setup passport deserialization
         function(callback) {
-          passport.deserializeUser(auth.deserialize);
+          passport.deserializeUser(user.deserialize);
           callback(null);
         },
         // add auth to http middleware
