@@ -8,15 +8,8 @@ auth.schema.description = "for integrating authentication";
 
 auth.persist('memory');
 
-// TODO remove
-user.property('browserid', {
-  description: "instance id of browserid",
-  type: 'string'
-});
-
 auth.providers = {};
 auth.setup = false;
-
 
 function start(options, callback) {
   var async = require('async');
@@ -32,10 +25,12 @@ function start(options, callback) {
     function(callback) {
       var providerName = options.provider.name.replace('auth-', '');
       logger.info("defining", providerName, "of auth");
-      auth.property(options.provider.name, {
+      user.property(providerName, {
         description: "instance id of " + options.provider.name,
         type: 'string'
       });
+      // TODO remove
+      user.persist('memory');
       callback(null);
     }],
     function(err, results) {
