@@ -14,6 +14,7 @@ auth.property('browserid', {
 });
 
 auth.providers = {};
+auth.setup = false;
 
 function serialize(auth, done) {
   done(null, auth.id);
