@@ -13,6 +13,8 @@ auth.property('browserid', {
   type: 'string'
 });
 
+auth.providers = {};
+
 function serialize(auth, done) {
   done(null, auth.id);
 }
@@ -47,95 +49,75 @@ auth.method('deserialize', deserialize, {
 });
 
 function start(options, callback) {
-  var passport = require('passport'),
-      async = require('async');
+  var async = require('async');
 
+  logger.info("using", options.provider.name, "as auth middleware");
   async.parallel([
-    // setup .view convention
+    // add auth provider to providers object
     function(callback) {
-      var view = resource.use('view');
-      view.create({ path: __dirname + '/view' }, function(err, _view) {
-          if (err) { callback(err); }
-          auth.view = _view;
-          callback(null, _view);
-      });
-    },
-    // setup passport serialization
-    function(callback) {
-      passport.serializeUser(auth.serialize);
+      auth.providers[options.provider.name] = options.provider;
       callback(null);
     },
-    // setup passport deserialization
+    // add property to store provider instance ids
     function(callback) {
-      passport.deserializeUser(auth.deserialize);
-      callback(null);
-    },
-    // setup auth providers
-    function(callback) {
-      //
-      // feature detection of which auth providers to use
-      //
-      auth.providers = {};
-      // regex of the resource name of an auth provider
-      var authRe = /auth-(.*)/;
-      // for each resource already .use'd, or possible auth provider
-      async.each(Object.keys(resource),
-        function(possibleAuthProvider) {
-          // test if auth provider
-          if (authRe.test(possibleAuthProvider)) {
-            // we found an auth provider, use it
-            var authProvider = resource[possibleAuthProvider];
-            logger.info("using", authProvider.name, "as auth middleware");
-
-            // get name of auth provider
-            var providerName = authRe.exec(authProvider.name)[1];
-            async.parallel([
-              // add provider to list of providers
-              function(callback) {
-                auth.providers[providerName] = authProvider;
-                callback(null);
-              },
-              // add property to store provider instance ids
-              function(callback) {
-                logger.info("defining", providerName, "of auth");
-                auth.property(providerName, {
-                  description: "instance id of " + authProvider.name,
-                  type: 'string'
-                });
-                callback(null);
-              },
-              function(callback) {
-              // use auth strategy of provider
-              authProvider.strategy(function(err, strategy) {
-                if (err) { return callback(err); }
-                passport.use(strategy);
-                // use route of provider
-                authProvider.routes(options[providerName], callback);
-              });
-            }],
-            function(err) {
-              return callback(err);
-            });
-          }
-      });
-    },
-    // add auth to http middleware
-    function(callback) {
-      http.app.after('session').use(passport.initialize()).as('auth-init');
-      http.app.after('auth-init').use(passport.session()).as('auth-session');
-      callback(null);
-    },
-    // setup logout route
-    function(callback) {
-      http.app.get('/logout', function(req, res){
-        req.logout();
-        res.redirect('/');
+      var providerName = options.provider.name.replace('auth-', '');
+      logger.info("defining", providerName, "of auth");
+      auth.property(options.provider.name, {
+        description: "instance id of " + options.provider.name,
+        type: 'string'
       });
       callback(null);
     }],
-  function(err, results) {
-    callback(err);
-  });
+    function(err, results) {
+      if (err) { return callback(err); }
+
+      // auth only needs to be setup once
+      if (auth.setup) {
+        return callback(null);
+      }
+      // set setup so we don't try to start again
+      auth.setup = true;
+
+      var passport = require('passport');
+
+      async.parallel([
+        // setup .view convention
+        function(callback) {
+          var view = resource.use('view');
+          view.create({ path: __dirname + '/view' }, function(err, _view) {
+              if (err) { callback(err); }
+              auth.view = _view;
+              callback(null, _view);
+          });
+        },
+        // setup passport serialization
+        function(callback) {
+          passport.serializeUser(auth.serialize);
+          callback(null);
+        },
+        // setup passport deserialization
+        function(callback) {
+          passport.deserializeUser(auth.deserialize);
+          callback(null);
+        },
+        // add auth to http middleware
+        function(callback) {
+          http.app.after('session').use(passport.initialize()).as('auth-init');
+          http.app.after('auth-init').use(passport.session()).as('auth-session');
+          callback(null);
+        },
+        // setup logout route
+        function(callback) {
+          http.app.get('/logout', function(req, res){
+            req.logout();
+            res.redirect('/');
+          });
+          callback(null);
+        }],
+      function(err, results) {
+        callback(err);
+      });
+    });
 }
 auth.method('start', start, {
   description: 'start authentication in an app'
@@ -174,6 +156,23 @@ auth.method('authorize', authorize, {
       type: 'object'
     },
     middleware: {
+      type: 'function'
+    }
+  }
+});
+
+function use(strategy, callback) {
+  var passport = require('passport');
+  passport.use(strategy);
+  callback(null);
+}
+auth.method('use', use, {
+  description: 'use an auth strategy',
+  properties: {
+    strategy: {
+      type: 'any'
+    },
+    callback: {
       type: 'function'
     }
   }
