@@ -3,17 +3,16 @@ var resource = require('resource');
 module['exports'] = function(options, callback) {
 
   var $ = this.$,
-      self = this,
       async = require('async'),
       auth = resource.use('auth');
 
-  // for each provider
+  // for each auth provider
   async.each(Object.keys(auth.providers),
-    // append provider present to dom
+    // append provider login to dropdown
     function(providerName, callback) {
       auth.providers[providerName].view.login.min.present(options, function(err, result) {
         if (err) { return callback(err); }
-        $('.authProviders').append(result);
+        $('#authProviders').append("<li>"+result+"</li>");
         return callback(null);
       });
     },
