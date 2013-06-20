@@ -27,7 +27,7 @@ function start(options, callback) {
       logger.info("defining", providerName, "of auth");
       user.property(providerName, {
         description: "instance id of " + options.provider.name,
-        type: 'string'
+        type: 'any'
       });
       // TODO remove
       user.persist('memory');
