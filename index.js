@@ -19,7 +19,7 @@ function start(options, callback) {
     // add auth provider to providers object
     function(callback) {
       auth.providers[options.provider.name] = options.provider;
-      callback(null);
+      return callback(null);
     },
     // add property to store provider instance ids
     function(callback) {
@@ -31,7 +31,7 @@ function start(options, callback) {
       });
       // TODO remove
       user.persist('memory');
-      callback(null);
+      return callback(null);
     }],
     function(err, results) {
       if (err) { return callback(err); }
@@ -50,26 +50,26 @@ function start(options, callback) {
         function(callback) {
           var view = resource.use('view');
           view.create({ path: __dirname + '/view' }, function(err, _view) {
-              if (err) { callback(err); }
+              if (err) { return callback(err); }
               auth.view = _view;
-              callback(null, _view);
+              return callback(null, _view);
           });
         },
         // setup passport serialization
         function(callback) {
           passport.serializeUser(user.serialize);
-          callback(null);
+          return callback(null);
         },
         // setup passport deserialization
         function(callback) {
           passport.deserializeUser(user.deserialize);
-          callback(null);
+          return callback(null);
         },
         // add auth to http middleware
         function(callback) {
           http.app.after('session').use(passport.initialize()).as('auth-init');
           http.app.after('auth-init').use(passport.session()).as('auth-session');
-          callback(null);
+          return callback(null);
         },
         // setup logout route
         function(callback) {
@@ -77,10 +77,10 @@ function start(options, callback) {
             req.logout();
             res.redirect('/');
           });
-          callback(null);
+          return callback(null);
         }],
       function(err, results) {
-        callback(err);
+        return callback(err);
       });
     });
 }
@@ -129,7 +129,7 @@ auth.method('authorize', authorize, {
 function use(strategy, callback) {
   var passport = require('passport');
   passport.use(strategy);
-  callback(null);
+  return callback(null);
 }
 auth.method('use', use, {
   description: 'use an auth strategy',
