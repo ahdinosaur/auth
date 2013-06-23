@@ -25,12 +25,12 @@ function start(options, callback) {
     function(callback) {
       var providerName = options.provider.name.replace('auth-', '');
       logger.info("defining", providerName, "of auth");
-      user.property(providerName, {
+      auth.property(providerName, {
         description: "instance id of " + options.provider.name,
         type: 'any'
       });
       // TODO remove
-      user.persist('memory');
+      auth.persist('memory');
       return callback(null);
     }],
     function(err, results) {
