@@ -6,16 +6,7 @@ module['exports'] = function(options, callback) {
       async = require('async'),
       auth = resource.use('auth');
 
-  // option to anchor dropdown to right or left
-  if (options.anchor === 'left') {
-    // defaults to left
-  } else if (options.anchor === 'right') {
-    $('#authDropdown').addClass('dropdown-anchor-right');
-  }
-
-  if (options.text) {
-    $('#authButton').text(options.text);
-  }
+  // TODO integrate auth with change creature
 
   // for each auth provider
   async.each(Object.keys(auth.providers),
@@ -23,7 +14,7 @@ module['exports'] = function(options, callback) {
     function(providerName, callback) {
       auth.providers[providerName].view.login.present(options, function(err, result) {
         if (err) { return callback(err); }
-        $('#authProviders').append("<li>"+result+"</li>");
+        $('#loginWithDropItems').append('<li role="presentation">'+result+'</li>');
         return callback(null);
       });
     },
